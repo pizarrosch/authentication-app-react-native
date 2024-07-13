@@ -6,8 +6,10 @@ import SignupScreen from './screens/SignupScreen';
 import WelcomeScreen from './screens/WelcomeScreen';
 import {Colors} from './constants/styles';
 import AuthContextProvider, {AuthContext} from "./store/auth-context";
-import {useContext} from "react";
+import {useContext, useEffect, useState} from "react";
 import IconButton from "./components/ui/IconButton";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import AppLoading from "expo-app-loading";
 
 const Stack = createNativeStackNavigator();
 
@@ -31,7 +33,7 @@ function AuthenticatedStack() {
   const authCtx = useContext(AuthContext);
 
   function onLogOut() {
-   authCtx.logout();
+    authCtx.logout();
   }
 
   return (
@@ -62,9 +64,33 @@ function Navigation() {
   const authCtx = useContext(AuthContext);
   return (
     <NavigationContainer>
-      {authCtx.isAuthenticated ? <AuthenticatedStack /> : <AuthStack/>}
+      {authCtx.isAuthenticated ? <AuthenticatedStack/> : <AuthStack/>}
     </NavigationContainer>
   );
+}
+
+export function Root() {
+  const [isTryingToLogIn, setIsTryingToLogIn] = useState(true);
+  const authCtx = useContext(AuthContext);
+
+  useEffect(() => {
+    async function fetchToken() {
+      const storedToken = await AsyncStorage.getItem('token');
+
+      if (storedToken) {
+        authCtx.authenticate(storedToken);
+      }
+    }
+
+    setIsTryingToLogIn(false);
+    fetchToken();
+  }, []);
+
+  if (isTryingToLogIn) {
+    return <AppLoading/>;
+  }
+
+  return <Navigation/>
 }
 
 export default function App() {
@@ -72,7 +98,7 @@ export default function App() {
     <>
       <StatusBar style="light"/>
       <AuthContextProvider>
-        <Navigation/>
+        <Root/>
       </AuthContextProvider>
     </>
   );
